@@ -314,26 +314,40 @@ class RAGService:
         jd_col = jd_collection(self._session_id)
 
         if mode == "resume":
-            return self._vector_store.similarity_search(
-                resume_col, query_vector, top_k, self._score_threshold
-            )
+            return self._search(resume_col, query_vector, top_k)
 
         if mode == "jd":
-            return self._vector_store.similarity_search(
-                jd_col, query_vector, top_k, self._score_threshold
-            )
+            return self._search(jd_col, query_vector, top_k)
 
         # "both": merge results from both collections
-        resume_results = self._vector_store.similarity_search(
-            resume_col, query_vector, top_k, self._score_threshold
-        )
-        jd_results = self._vector_store.similarity_search(
-            jd_col, query_vector, top_k, self._score_threshold
-        )
+        resume_results = self._search(resume_col, query_vector, top_k)
+        jd_results = self._search(jd_col, query_vector, top_k)
 
         merged = resume_results + jd_results
         merged.sort(key=lambda r: r.score, reverse=True)
         return merged[:top_k]
+
+    def _search(
+        self,
+        collection: str,
+        query_vector: list[float],
+        top_k: int,
+    ) -> list[SearchResult]:
+        """
+        Search one collection, preferring chunks above the score threshold.
+
+        These collections hold only the user's own resume or job description,
+        so if nothing clears the threshold (typical for a short document that
+        is a single chunk covering many topics) the closest chunks are still
+        the best context. Returning nothing would make the assistant claim the
+        documents contain no information.
+        """
+        results = self._vector_store.similarity_search(
+            collection, query_vector, top_k, self._score_threshold
+        )
+        if results:
+            return results
+        return self._vector_store.similarity_search(collection, query_vector, top_k, 0.0)
 
     # ------------------------------------------------------------------ #
     #  Prompt construction                                                #
