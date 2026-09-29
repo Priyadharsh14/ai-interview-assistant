@@ -132,8 +132,10 @@ def _run_pipeline(resume_file, jd_file, jd_text: str) -> None:
 
         # ── 4. Index both documents ────────────────────────────────
         progress.progress(65, text="Building search index…")
-        indexer.index_resume(resume, session_id)
-        indexer.index_jd(jd, session_id)
+        index_results = [
+            indexer.index_resume(resume, session_id),
+            indexer.index_jd(jd, session_id),
+        ]
 
         # ── 5. Clear stale analysis results ───────────────────────
         session_state.reset_analysis()
@@ -144,6 +146,13 @@ def _run_pipeline(resume_file, jd_file, jd_text: str) -> None:
             f"Detected **{len(resume.skills)} skills** and "
             f"**{len(jd.required_skills)} required skills**."
         )
+        failed = [r for r in index_results if not r.success]
+        if failed:
+            st.warning(
+                "Your documents were parsed, but building the search index failed for "
+                f"{len(failed)} of them, so the AI Assistant may not find your content. "
+                f"Details: {failed[0].error_message or 'unknown error'}"
+            )
 
     except Exception as e:
         logger.error("Upload pipeline failed", extra={"error": str(e)})

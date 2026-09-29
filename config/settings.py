@@ -161,7 +161,7 @@ class AppSettings(BaseSettings):
         default="AI Interview Preparation Assistant",
         description="Application display name",
     )
-    app_version: str = Field(default="1.0.0", description="Application version")
+    app_version: str = Field(default="1.0.1", description="Application version")
     app_env: Literal["development", "staging", "production"] = Field(
         default="development",
         description="Deployment environment",
