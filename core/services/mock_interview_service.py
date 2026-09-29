@@ -394,8 +394,8 @@ class MockInterviewService:
         Compile a complete InterviewScorecard from a finished session.
 
         Computes:
-        - Overall score (mean of all evaluations including skips)
-        - Per-category averages
+        - Overall score (mean of answered questions; skips are counted separately)
+        - Per-category averages (answered questions only)
         - Top 3 strengths (most common across all evaluations)
         - Top 3 improvement areas (most common across all evaluations)
         - Session duration in minutes
@@ -408,14 +408,15 @@ class MockInterviewService:
         answered = [e for e in evaluations if e.candidate_answer != "[SKIPPED]"]
         skipped = [e for e in evaluations if e.candidate_answer == "[SKIPPED]"]
 
-        # Overall score
+        # Overall score — answered questions only, so ending early or skipping
+        # doesn't zero out the questions the candidate actually answered.
         overall = (
-            round(sum(e.score for e in evaluations) / len(evaluations), 2)
-            if evaluations else 0.0
+            round(sum(e.score for e in answered) / len(answered), 2)
+            if answered else 0.0
         )
 
         # Category scores
-        category_scores = self._compute_category_scores(questions, evaluations)
+        category_scores = self._compute_category_scores(questions, answered)
 
         # Aggregate strengths and improvements
         all_strengths: list[str] = []

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
+from html import escape
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -41,7 +42,6 @@ def main() -> None:
     """Configure and launch the Streamlit application."""
     st.set_page_config(
         page_title=settings.app.app_name,
-        page_icon="🎯",
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
@@ -60,10 +60,9 @@ def main() -> None:
     # ── Sidebar ────────────────────────────────────────────────────
     with st.sidebar:
         st.markdown(
-            '<h2 style="color:var(--text-primary);margin:0;font-size:1.2rem">'
-            '🎯 Interview Prep</h2>'
-            '<p style="color:var(--text-muted);font-size:.72rem;margin:.2rem 0 1.5rem">'
-            f'v{settings.app.app_version} · AI-powered</p>',
+            '<div class="brand"><div class="brand-mark">IP</div>'
+            '<div class="brand-name">Interview Prep</div></div>'
+            f'<div class="brand-sub">v{escape(settings.app.app_version)} &middot; AI-powered</div>',
             unsafe_allow_html=True,
         )
 
@@ -72,44 +71,38 @@ def main() -> None:
             resume = session_state.get_resume()
             jd = session_state.get_jd()
             st.markdown(
-                f'<div style="background:rgba(34,197,94,.12);border:1px solid '
-                f'rgba(34,197,94,.3);border-radius:8px;padding:.6rem .8rem;'
-                f'margin-bottom:1rem;font-size:.78rem;color:#22c55e">'
-                f'✅ {(resume.file_name or "Resume")[:22]}<br>'
-                f'✅ {(jd.job_title or "Job Description")[:22]}</div>',
+                '<div class="status-box ready">'
+                f'<span class="k">Resume</span>{escape((resume.file_name or "Resume")[:26])}'
+                f'<span class="k" style="margin-top:.4rem">Target role</span>'
+                f'{escape((jd.job_title or "Job Description")[:26])}</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                '<div style="background:rgba(245,158,11,.10);border:1px solid '
-                'rgba(245,158,11,.3);border-radius:8px;padding:.6rem .8rem;'
-                'margin-bottom:1rem;font-size:.78rem;color:#f59e0b">'
-                '⚠️ Upload documents to begin</div>',
+                '<div class="status-box pending">'
+                '<span class="k">No documents yet</span>'
+                'Upload a resume and job description to begin.</div>',
                 unsafe_allow_html=True,
             )
 
-        st.markdown(
-            '<p style="color:var(--text-muted);font-size:.72rem;'
-            'text-transform:uppercase;letter-spacing:.08em;margin:1rem 0 .4rem">'
-            'Navigation</p>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="nav-label">Navigation</div>', unsafe_allow_html=True)
 
         pages = [
-            ("📁", "upload",      "Upload Documents"),
-            ("🏠", "dashboard",   "Dashboard"),
-            ("💬", "chat",        "AI Assistant"),
-            ("📊", "ats",         "ATS Report"),
-            ("🧠", "skill_gap",   "Skill Gap"),
-            ("✏️", "improvement", "Resume Tips"),
-            ("🎤", "mock",        "Mock Interview"),
-            ("📈", "analytics",   "Analytics"),
+            ("upload",      "Upload Documents", ":material/upload_file:"),
+            ("dashboard",   "Dashboard",        ":material/dashboard:"),
+            ("chat",        "AI Assistant",     ":material/chat:"),
+            ("ats",         "ATS Report",       ":material/fact_check:"),
+            ("skill_gap",   "Skill Gap",        ":material/target:"),
+            ("improvement", "Resume Tips",      ":material/edit_note:"),
+            ("mock",        "Mock Interview",   ":material/mic:"),
+            ("analytics",   "Analytics",        ":material/monitoring:"),
         ]
 
-        for icon, key, label in pages:
+        for key, label, nav_icon in pages:
             active = session_state.get_active_page() == key
             if st.button(
-                f"{icon}  {label}",
+                label,
+                icon=nav_icon,
                 key=f"nav_{key}",
                 use_container_width=True,
                 type="primary" if active else "secondary",
@@ -118,11 +111,9 @@ def main() -> None:
                 st.rerun()
 
         # ── Footer ─────────────────────────────────────────────────
-        st.markdown("<br>" * 3, unsafe_allow_html=True)
         st.markdown(
-            '<div style="color:var(--text-muted);font-size:.68rem;text-align:center">'
-            f'Groq · Llama 3.3 · LangChain<br>'
-            f'ChromaDB · Sentence Transformers</div>',
+            '<div class="sidebar-foot">Groq &middot; GPT-OSS 120B &middot; LangChain<br>'
+            'ChromaDB &middot; Sentence Transformers</div>',
             unsafe_allow_html=True,
         )
 

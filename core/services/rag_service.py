@@ -51,7 +51,7 @@ logger = get_logger(__name__)
 RetrievalMode = Literal["resume", "jd", "both"]
 
 # Maximum characters of retrieved context to inject into the prompt.
-# Prevents overflowing Llama 3.3's 32k context window.
+# Prevents overflowing the model's 32k context window.
 MAX_CONTEXT_CHARS = 6_000
 
 

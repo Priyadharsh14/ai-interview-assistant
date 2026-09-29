@@ -68,9 +68,14 @@ def parse_llm_json(raw_response: str) -> Any:
                 continue
 
     # Strategy 3: Find the first { or [ and parse from there
+    obj_idx, arr_idx = text.find("{"), text.find("[")
     for start_char, end_char in [("{", "}"), ("[", "]")]:
         start_idx = text.find(start_char)
         if start_idx == -1:
+            continue
+        # If the response opens with an object that failed to parse (e.g. it
+        # was truncated), don't return one of its inner lists as the result.
+        if start_char == "[" and obj_idx != -1 and obj_idx < arr_idx:
             continue
 
         # Find matching closing character

@@ -267,16 +267,18 @@ class SkillGapEngine:
             det["missing_technical"],
             self._safe_str_list(llm.get("missing_technical_skills")),
         )
-        # Remove anything the LLM recognised as matched
-        llm_matched_lower = {s.lower() for s in self._safe_str_list(llm.get("matched_skills"))}
-        missing_tech = [s for s in missing_tech if s.lower() not in llm_matched_lower]
-
         # Missing soft skills
         missing_soft = self._merge_unique(
             det["missing_soft"],
             self._safe_str_list(llm.get("missing_soft_skills")),
         )
-        missing_soft = [s for s in missing_soft if s.lower() not in llm_matched_lower]
+
+        # A skill can't be both matched and missing. The two analyses word
+        # skills differently ("OOP" vs "Object-Oriented Programming (OOP)"),
+        # so compare on canonical form against the merged matched list.
+        matched_canon = [self._canon(s) for s in matched]
+        missing_tech = [s for s in missing_tech if not self._is_covered(s, matched_canon)]
+        missing_soft = [s for s in missing_soft if not self._is_covered(s, matched_canon)]
 
         # Skill match percentage — blend if LLM provides a value
         llm_pct = self._safe_float(llm.get("skill_match_percentage"))
@@ -318,6 +320,33 @@ class SkillGapEngine:
         Keeps hyphens (e.g. "problem-solving").
         """
         return skill.lower().strip().rstrip(".,;:")
+
+    @staticmethod
+    def _canon(skill: str) -> str:
+        """Canonical form for fuzzy skill comparison: drop parentheticals and punctuation."""
+        text = re.sub(r"\([^)]*\)", " ", skill.lower())
+        return " ".join(re.sub(r"[^a-z0-9+#]+", " ", text).split())
+
+    @classmethod
+    def _is_covered(cls, skill: str, matched_canon: list[str]) -> bool:
+        """
+        True if `skill` equals, or is a multi-word phrase contained in
+        (or containing a multi-word phrase of), an already-matched skill.
+        """
+        c = cls._canon(skill)
+        if not c:
+            return False
+        padded = f" {c} "
+        for m in matched_canon:
+            if not m:
+                continue
+            if c == m:
+                return True
+            if len(m.split()) >= 2 and f" {m} " in padded:
+                return True
+            if len(c.split()) >= 2 and padded.strip() and f" {c} " in f" {m} ":
+                return True
+        return False
 
     @staticmethod
     def _is_soft_skill(normalised_skill: str) -> bool:

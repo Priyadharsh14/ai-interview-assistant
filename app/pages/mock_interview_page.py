@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from app.components import cards, session_state, service_factory
@@ -9,11 +11,18 @@ from core.services.mock_interview_service import InterviewScorecard
 
 
 def render() -> None:
-    st.markdown(cards.section_header("🎤 Mock Interview"), unsafe_allow_html=True)
+    st.markdown(
+        cards.page_header(
+            "Mock interview",
+            "Answer questions tailored to your resume and the role. Each answer is scored with feedback.",
+            kicker="Practice",
+        ),
+        unsafe_allow_html=True,
+    )
 
     if not session_state.is_ready():
         st.markdown(
-            cards.empty_state("🎤", "Upload documents first",
+            cards.empty_state("Upload documents first",
                               "A mock interview needs your resume and JD."),
             unsafe_allow_html=True,
         )
@@ -42,7 +51,7 @@ def _render_start_screen() -> None:
         unsafe_allow_html=True,
     )
     num_q = st.slider("Number of questions", 5, 15, 10)
-    if st.button("Start Mock Interview →", use_container_width=True):
+    if st.button("Start Mock Interview →", type="primary", use_container_width=True):
         with st.spinner("Generating questions…"):
             try:
                 svc = service_factory.get_mock_interview_service()
@@ -71,24 +80,12 @@ def _render_active_session(session) -> None:
         return
 
     # Question display
-    type_badge = (
-        f'<span style="background:var(--accent-soft);color:var(--accent);'
-        f'border-radius:999px;padding:.2rem .6rem;font-size:.72rem;font-weight:600">'
-        f'{current_q.question_type.value.upper()}</span>'
-    )
-    diff_colours = {"easy": "#22c55e", "medium": "#f59e0b", "hard": "#ef4444"}
-    diff_colour = diff_colours.get(current_q.difficulty.value, "#94a3b8")
-    diff_badge = (
-        f'<span style="color:{diff_colour};font-size:.75rem;font-weight:600">'
-        f'◆ {current_q.difficulty.value.upper()}</span>'
-    )
+    type_badge = cards.badge(current_q.question_type.value, "type")
+    diff_badge = cards.badge(current_q.difficulty.value, current_q.difficulty.value)
 
     st.markdown(
-        f'<div style="background:var(--bg-card);border:1px solid var(--border-soft);'
-        f'border-radius:12px;padding:1.5rem">'
-        f'<div style="margin-bottom:.75rem">{type_badge}&nbsp;&nbsp;{diff_badge}</div>'
-        f'<p style="font-size:1.05rem;color:var(--text-primary);font-weight:500;'
-        f'line-height:1.6">{current_q.question}</p></div>',
+        f'<div class="panel"><div>{type_badge}&nbsp;&nbsp;{diff_badge}</div>'
+        f'<p class="q">{escape(current_q.question)}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -102,7 +99,7 @@ def _render_active_session(session) -> None:
 
     col_submit, col_skip, col_end = st.columns([3, 1, 1])
     with col_submit:
-        if st.button("Submit Answer →", use_container_width=True,
+        if st.button("Submit Answer →", type="primary", use_container_width=True,
                      disabled=not answer_text.strip()):
             with st.spinner("Evaluating…"):
                 updated, evaluation = svc.submit_answer(
@@ -127,14 +124,12 @@ def _render_active_session(session) -> None:
 
 def _show_evaluation(evaluation, model_answer: str) -> None:
     score = evaluation.score
-    colour = "#22c55e" if score >= 7 else "#f59e0b" if score >= 5 else "#ef4444"
+    tone = "good" if score >= 7 else "ok" if score >= 5 else "poor"
     st.markdown(
-        f'<div style="background:var(--bg-card);border:1px solid var(--border-soft);'
-        f'border-radius:10px;padding:1rem;margin-top:.75rem">'
-        f'<div style="color:{colour};font-size:1.4rem;font-weight:700">'
-        f'{score:.1f} / 10</div>'
-        f'<p style="color:var(--text-secondary);font-size:.88rem;margin:.5rem 0">'
-        f'{evaluation.feedback}</p></div>',
+        f'<div class="panel" style="margin-top:.75rem">'
+        f'<div class="score-inline {tone}">{score:.1f} / 10</div>'
+        f'<p style="color:var(--text-secondary);font-size:.9rem;margin:.5rem 0 0">'
+        f'{escape(evaluation.feedback)}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -143,7 +138,10 @@ def _render_scorecard(session) -> None:
     svc = service_factory.get_mock_interview_service()
     scorecard: InterviewScorecard = svc._generate_scorecard(session)
 
-    st.markdown(cards.section_header("🏆 Interview Complete"), unsafe_allow_html=True)
+    st.markdown(
+        cards.page_header("Interview complete", "Here is how you did.", kicker="Results"),
+        unsafe_allow_html=True,
+    )
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -191,6 +189,6 @@ def _render_scorecard(session) -> None:
 
     # Restart
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🔄 Start New Interview", use_container_width=True):
+    if st.button("Start New Interview", type="primary", use_container_width=True):
         session_state.set_mock_session(None)
         st.rerun()

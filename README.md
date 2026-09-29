@@ -23,7 +23,7 @@ Upload your resume and a job description, and the app gives you:
 1. Upload your resume (PDF/DOCX) and paste or upload a job description
 2. The app extracts text and splits it into chunks, then converts those chunks into embeddings using a local Sentence Transformer model
 3. Embeddings are stored in ChromaDB, a vector database, so relevant content can be retrieved later
-4. When you ask a question or run an analysis, the app retrieves the most relevant chunks from your documents and sends them to Groq's Llama 3.3 along with your question — this is called RAG (Retrieval-Augmented Generation), and it's what keeps answers grounded in your actual resume and job description instead of generic responses
+4. When you ask a question or run an analysis, the app retrieves the most relevant chunks from your documents and sends them to Groq's GPT-OSS 120B along with your question — this is called RAG (Retrieval-Augmented Generation), and it's what keeps answers grounded in your actual resume and job description instead of generic responses
 5. For scoring features (ATS, Skill Gap), the app combines exact keyword matching with the LLM's contextual understanding to produce a more accurate result than either approach alone
 6. For Mock Interview, the LLM generates personalised questions based on your resume and the job, then evaluates your typed answers against a scoring rubric
 ---
@@ -33,7 +33,7 @@ Upload your resume and a job description, and the app gives you:
 | Layer | Technology |
 |---|---|
 | Frontend | Streamlit |
-| LLM | Groq API (Llama 3.3 70B) |
+| LLM | Groq API (GPT-OSS 120B, free tier) |
 | RAG Framework | LangChain |
 | Vector Database | ChromaDB |
 | Embeddings | Sentence Transformers (all-MiniLM-L6-v2) |

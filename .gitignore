@@ -1,0 +1,13 @@
+# Secrets - never commit API keys
+.env
+.streamlit/secrets.toml
+
+# Environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Local data and tooling
+data/
+.claude/

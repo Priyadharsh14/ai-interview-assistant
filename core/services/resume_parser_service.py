@@ -132,9 +132,10 @@ class ResumeParserService:
             response = self._llm.generate(
                 messages=messages,
                 temperature=0.1,   # Low temperature for deterministic extraction
-                max_tokens=2048,
+                max_tokens=4096,
             )
-            return parse_llm_json(response.content)
+            parsed = parse_llm_json(response.content)
+            return parsed if isinstance(parsed, dict) else {}
 
         except LLMJSONParseError as e:
             logger.warning(

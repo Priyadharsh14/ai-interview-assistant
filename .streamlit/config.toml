@@ -4,3 +4,11 @@ showSidebarNavigation = false
 [server]
 maxUploadSize = 10
 enableXsrfProtection = false
+
+[theme]
+base = "light"
+primaryColor = "#2b59e6"
+backgroundColor = "#f6f7f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0f172a"
+font = "sans serif"

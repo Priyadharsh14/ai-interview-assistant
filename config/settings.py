@@ -7,7 +7,7 @@ All secrets are loaded from environment variables — never hardcoded.
 Usage:
     from config.settings import get_settings
     settings = get_settings()
-    print(settings.groq_api_key)
+    print(settings.groq_api_key)  # masked: SecretStr('**********')
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import sys
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,11 +25,15 @@ class LLMSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Groq / Llama
-    groq_api_key: str = Field(..., description="Groq API key for Llama 3.3 access")
+    # Groq (free tier) / GPT-OSS
+    groq_api_key: SecretStr = Field(..., description="Groq API key for GPT-OSS access")
     groq_model: str = Field(
-        default="llama-3.3-70b-versatile",
+        default="openai/gpt-oss-120b",
         description="Groq model identifier",
+    )
+    groq_fallback_model: str = Field(
+        default="openai/gpt-oss-20b",
+        description="Used when the primary model is rate-limited (empty to disable)",
     )
     groq_base_url: str = Field(
         default="https://api.groq.com/openai/v1",
@@ -58,12 +62,13 @@ class LLMSettings(BaseSettings):
 
     @field_validator("groq_api_key")
     @classmethod
-    def validate_groq_key(cls, v: str) -> str:
-        if not v or v.strip() == "":
+    def validate_groq_key(cls, v: SecretStr) -> SecretStr:
+        key = v.get_secret_value().strip()
+        if not key:
             raise ValueError("GROQ_API_KEY must not be empty")
-        if not v.startswith("gsk_"):
+        if not key.startswith("gsk_"):
             raise ValueError("GROQ_API_KEY must start with 'gsk_'")
-        return v.strip()
+        return SecretStr(key)
 
 
 class EmbeddingSettings(BaseSettings):

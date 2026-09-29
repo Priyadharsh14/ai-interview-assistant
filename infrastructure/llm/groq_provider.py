@@ -2,7 +2,7 @@
 Groq LLM Provider.
 
 Concrete implementation of BaseLLMProvider using the Groq API
-with Llama 3.3 as the active model.
+with GPT-OSS 120B as the active model.
 
 Features:
 - Automatic retry with exponential backoff (tenacity)
@@ -71,8 +71,10 @@ class GroqProvider(BaseLLMProvider):
     def __init__(self) -> None:
         settings = get_settings()
         self._settings = settings.llm
-        self._client = Groq(api_key=self._settings.groq_api_key)
-        self._async_client = AsyncGroq(api_key=self._settings.groq_api_key)
+        api_key = self._settings.groq_api_key.get_secret_value()
+        timeout = float(self._settings.llm_timeout)
+        self._client = Groq(api_key=api_key, timeout=timeout, max_retries=1)
+        self._async_client = AsyncGroq(api_key=api_key, timeout=timeout, max_retries=1)
         logger.info(
             "GroqProvider initialised",
             extra={"model": self._settings.groq_model},
@@ -131,6 +133,7 @@ class GroqProvider(BaseLLMProvider):
                 messages=groq_messages,
                 temperature=temperature or self._settings.llm_temperature,
                 max_tokens=max_tokens or self._settings.llm_max_tokens,
+                **self._reasoning_kwargs(),
             ) as stream:
                 async for chunk in stream:
                     delta = chunk.choices[0].delta.content
@@ -165,6 +168,17 @@ class GroqProvider(BaseLLMProvider):
             logger.error("Groq health check failed", extra={"error": str(e)})
             return False
 
+    def _reasoning_kwargs(self, model: str | None = None) -> dict:
+        """
+        Cap hidden reasoning for gpt-oss models.
+
+        Reasoning tokens count against max_tokens, so at default effort a
+        structured-JSON reply can be truncated before it finishes.
+        """
+        if "gpt-oss" in (model or self._settings.groq_model):
+            return {"reasoning_effort": "low"}
+        return {}
+
     @property
     def provider_name(self) -> str:
         return "Groq"
@@ -193,13 +207,29 @@ class GroqProvider(BaseLLMProvider):
         groq_messages = self._to_groq_format(messages)
         start = time.perf_counter()
 
-        try:
-            completion = self._client.chat.completions.create(
-                model=self._settings.groq_model,
+        def _create(model: str):
+            return self._client.chat.completions.create(
+                model=model,
                 messages=groq_messages,
                 temperature=temperature or self._settings.llm_temperature,
                 max_tokens=max_tokens or self._settings.llm_max_tokens,
+                **self._reasoning_kwargs(model),
             )
+
+        try:
+            try:
+                completion = _create(self._settings.groq_model)
+            except RateLimitError:
+                # Each Groq model has its own free-tier quota, so a smaller model
+                # can keep the app responsive while the primary is rate-limited.
+                fallback = self._settings.groq_fallback_model
+                if not fallback or fallback == self._settings.groq_model:
+                    raise
+                logger.warning(
+                    "Primary model rate-limited — using fallback model",
+                    extra={"primary": self._settings.groq_model, "fallback": fallback},
+                )
+                completion = _create(fallback)
         except (APIConnectionError, RateLimitError, APIStatusError) as e:
             logger.warning(
                 "Groq API error — will retry",

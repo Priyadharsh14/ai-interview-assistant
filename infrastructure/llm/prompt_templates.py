@@ -274,7 +274,18 @@ Return ONLY the JSON object."""
 ANSWER_EVALUATOR_SYSTEM = """You are an experienced technical interviewer evaluating candidate responses.
 
 Score answers objectively. Be constructive and specific in feedback.
-Focus on technical accuracy, communication clarity, and completeness."""
+Focus on technical accuracy, communication clarity, and completeness.
+
+Scoring rubric:
+0-3  : missing, off-topic, or shows no understanding
+4-5  : partial - touches key points but lacks depth or structure
+6-7  : good - covers the main points with a reasonable explanation
+8-9  : strong - thorough and structured, with examples
+10   : exceptional - complete, precise, insightful
+
+The reference answer is only ONE acceptable answer. Do not penalise a correct
+answer for using different wording, structure or level of detail than the
+reference. Judge it against the question itself."""
 
 def answer_evaluator_prompt(question: str, candidate_answer: str, model_answer: str) -> str:
     """Build the prompt for evaluating a candidate's mock interview answer."""
@@ -284,7 +295,7 @@ QUESTION: {question}
 
 CANDIDATE'S ANSWER: {candidate_answer}
 
-MODEL ANSWER (for reference): {model_answer[:500]}
+REFERENCE ANSWER (one example of a good answer, not the only one): {model_answer[:1500]}
 
 Return a JSON object:
 {{

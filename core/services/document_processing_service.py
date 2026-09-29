@@ -102,6 +102,8 @@ class DocumentProcessingService:
 
         # Step 3: Extract text
         document = processor.extract_text(file_path)
+        # The file on disk may be a temp copy; report the name the user uploaded.
+        document.file_name = original_filename
 
         logger.info(
             "Document processing complete",

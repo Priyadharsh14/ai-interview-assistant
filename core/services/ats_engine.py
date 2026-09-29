@@ -303,9 +303,14 @@ class ATSEngine:
         for kw in llm_matched:
             if kw.lower() not in matched_set:
                 matched_kw.append(kw)
+        matched_set |= {k.lower() for k in llm_matched}
         for kw in llm_missing:
             if kw.lower() not in missing_set and kw.lower() not in matched_set:
                 missing_kw.append(kw)
+
+        # The LLM is synonym-aware, so a keyword it found in the resume is not
+        # missing even if exact string matching failed to find it.
+        missing_kw = [k for k in missing_kw if k.lower() not in matched_set]
 
         # Recommendations: LLM if available, else generate basic ones
         recommendations = self._safe_str_list(llm.get("recommendations"))

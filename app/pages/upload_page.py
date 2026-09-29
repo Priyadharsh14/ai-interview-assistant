@@ -16,11 +16,24 @@ logger = get_logger(__name__)
 
 
 def render() -> None:
-    st.markdown(cards.section_header("📄 Upload Documents"), unsafe_allow_html=True)
     st.markdown(
-        '<p style="color:var(--text-secondary);margin-bottom:1.5rem">'
-        "Upload your resume and paste or upload a job description to begin."
-        "</p>",
+        cards.page_header(
+            "Upload documents",
+            "Add your resume and the job you are targeting. Everything else in the app is "
+            "built from these two documents.",
+            kicker="Step 1 of 3",
+        ),
+        unsafe_allow_html=True,
+    )
+    loaded = session_state.is_ready()
+    st.markdown(
+        cards.steps([
+            ("Upload documents", "Resume as PDF or DOCX, plus the job description.",
+             "done" if loaded else "current"),
+            ("Run the analysis", "ATS score, skill gaps and resume tips.",
+             "current" if loaded else "todo"),
+            ("Practise interviews", "Tailored questions with scored feedback.", "todo"),
+        ]),
         unsafe_allow_html=True,
     )
 
@@ -28,7 +41,8 @@ def render() -> None:
 
     # ── Resume upload ──────────────────────────────────────────────
     with col_resume:
-        st.markdown("**Resume**", unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Your resume</div>', unsafe_allow_html=True)
+        st.markdown('<p class="card-note">PDF or DOCX, up to 10 MB.</p>', unsafe_allow_html=True)
         resume_file = st.file_uploader(
             "Upload your resume",
             type=["pdf", "docx"],
@@ -38,7 +52,9 @@ def render() -> None:
 
     # ── JD input ───────────────────────────────────────────────────
     with col_jd:
-        st.markdown("**Job Description**", unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Job description</div>', unsafe_allow_html=True)
+        st.markdown('<p class="card-note">Upload the posting or paste its text.</p>',
+                    unsafe_allow_html=True)
         jd_tab_file, jd_tab_text = st.tabs(["Upload file", "Paste text"])
 
         with jd_tab_file:
@@ -64,10 +80,10 @@ def render() -> None:
     has_jd = jd_file is not None or (jd_text and jd_text.strip())
 
     if not has_resume or not has_jd:
-        st.info("Upload a resume and provide a job description to continue.", icon="ℹ️")
+        st.info("Upload a resume and provide a job description to continue.")
         return
 
-    if st.button("Analyse Resume & JD →", use_container_width=True):
+    if st.button("Analyse Resume & JD →", type="primary", use_container_width=True):
         _run_pipeline(resume_file, jd_file, jd_text)
 
 
@@ -124,11 +140,10 @@ def _run_pipeline(resume_file, jd_file, jd_text: str) -> None:
 
         progress.progress(100, text="Done!")
         st.success(
-            f"✅ Resume and JD loaded. "
+            f"Resume and JD loaded. "
             f"Detected **{len(resume.skills)} skills** and "
             f"**{len(jd.required_skills)} required skills**."
         )
-        st.balloons()
 
     except Exception as e:
         logger.error("Upload pipeline failed", extra={"error": str(e)})
