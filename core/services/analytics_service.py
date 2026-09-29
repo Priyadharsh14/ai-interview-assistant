@@ -327,9 +327,9 @@ class AnalyticsService:
         """
         completed = [s for s in sessions if s.is_complete]
 
-        total_answered = sum(s.questions_answered for s in sessions)
+        total_answered = sum(len(s.answered_evaluations) for s in sessions)
         total_skipped = sum(
-            s.questions_remaining + (1 if not s.is_complete else 0)
+            (len(s.evaluations) - len(s.answered_evaluations)) + s.questions_remaining
             for s in sessions
         )
 

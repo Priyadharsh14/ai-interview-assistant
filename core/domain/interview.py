@@ -98,10 +98,17 @@ class MockInterviewSession(BaseModel):
         return len(self.questions) - self.questions_answered
 
     @property
+    def answered_evaluations(self) -> list[AnswerEvaluation]:
+        """Evaluations for questions the candidate actually answered (skips excluded)."""
+        return [e for e in self.evaluations if e.candidate_answer != "[SKIPPED]"]
+
+    @property
     def average_score(self) -> float:
-        if not self.evaluations:
+        """Mean score over answered questions; skipped questions are not scored as zeros."""
+        answered = self.answered_evaluations
+        if not answered:
             return 0.0
-        return sum(e.score for e in self.evaluations) / len(self.evaluations)
+        return sum(e.score for e in answered) / len(answered)
 
 
 class ChatMessage(BaseModel):

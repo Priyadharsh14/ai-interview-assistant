@@ -9,6 +9,8 @@ import streamlit as st
 from app.components import cards, session_state, service_factory
 from core.services.mock_interview_service import InterviewScorecard
 
+_LAST_FEEDBACK = "mock_last_feedback"
+
 
 def render() -> None:
     st.markdown(
@@ -61,6 +63,7 @@ def _render_start_screen() -> None:
                     num_questions=num_q,
                 )
                 session_state.set_mock_session(session)
+                st.session_state.pop(_LAST_FEEDBACK, None)
                 st.rerun()
             except Exception as e:
                 st.error(f"Could not start session: {e}")
@@ -74,6 +77,10 @@ def _render_active_session(session) -> None:
     # Progress bar
     st.progress(answered / total, text=f"Question {answered + 1} of {total}")
     st.markdown("<br>", unsafe_allow_html=True)
+
+    last = st.session_state.get(_LAST_FEEDBACK)
+    if last is not None:
+        _show_evaluation(last)
 
     current_q = svc.get_next_question(session)
     if current_q is None:
@@ -108,28 +115,46 @@ def _render_active_session(session) -> None:
                     jd=session_state.get_jd(),
                 )
                 session_state.set_mock_session(updated)
-                _show_evaluation(evaluation, current_q.model_answer or "")
+                # The page reruns straight away, so keep the feedback to show
+                # above the next question instead of losing it.
+                st.session_state[_LAST_FEEDBACK] = evaluation
                 st.rerun()
     with col_skip:
         if st.button("Skip", use_container_width=True):
             updated = svc.skip_question(session)
             session_state.set_mock_session(updated)
+            st.session_state.pop(_LAST_FEEDBACK, None)
             st.rerun()
     with col_end:
         if st.button("End", use_container_width=True):
             scorecard = svc.end_session(session)
             session_state.set_mock_session(session)
+            st.session_state.pop(_LAST_FEEDBACK, None)
             st.rerun()
 
 
-def _show_evaluation(evaluation, model_answer: str) -> None:
+def _show_evaluation(evaluation) -> None:
+    """Feedback panel for the answer the candidate just submitted."""
     score = evaluation.score
     tone = "good" if score >= 7 else "ok" if score >= 5 else "poor"
+
+    def _items(title: str, values: list[str]) -> str:
+        if not values:
+            return ""
+        lis = "".join(f"<li>{escape(v)}</li>" for v in values[:3])
+        return (f'<div class="card-title" style="margin:.75rem 0 .25rem">{title}</div>'
+                f'<ul style="margin:0;padding-left:1.1rem;color:var(--text-secondary);'
+                f'font-size:.88rem;line-height:1.5">{lis}</ul>')
+
     st.markdown(
-        f'<div class="panel" style="margin-top:.75rem">'
+        '<div class="panel" style="margin-bottom:1rem">'
+        '<div class="card-title" style="margin-bottom:.35rem">Feedback on your previous answer</div>'
         f'<div class="score-inline {tone}">{score:.1f} / 10</div>'
         f'<p style="color:var(--text-secondary);font-size:.9rem;margin:.5rem 0 0">'
-        f'{escape(evaluation.feedback)}</p></div>',
+        f'{escape(evaluation.feedback)}</p>'
+        f'{_items("What went well", evaluation.strengths)}'
+        f'{_items("To improve", evaluation.areas_for_improvement)}'
+        '</div>',
         unsafe_allow_html=True,
     )
 
@@ -191,4 +216,5 @@ def _render_scorecard(session) -> None:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Start New Interview", type="primary", use_container_width=True):
         session_state.set_mock_session(None)
+        st.session_state.pop(_LAST_FEEDBACK, None)
         st.rerun()
