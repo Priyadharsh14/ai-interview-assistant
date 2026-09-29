@@ -131,7 +131,7 @@ def main() -> None:
         "analytics":   "app.pages.analytics_page",
     }
 
-    module_path = page_map.get(page, "app.pages.dashboard_page")
+    module_path = page_map.get(page, "app.pages.upload_page")
 
     import importlib
     module = importlib.import_module(module_path)

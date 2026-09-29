@@ -52,7 +52,7 @@ def init_session() -> None:
         _MOCK_SESSION:  None,
         _ANALYTICS:     None,
         _MEMORY:        None,
-        _ACTIVE_PAGE:   "dashboard",
+        _ACTIVE_PAGE:   "upload",
         _SESSION_ID:    str(uuid.uuid4()),
     }
 
@@ -122,7 +122,7 @@ def get_session_id() -> str:
     return st.session_state[_SESSION_ID]
 
 def get_active_page() -> str:
-    return st.session_state.get(_ACTIVE_PAGE, "dashboard")
+    return st.session_state.get(_ACTIVE_PAGE, "upload")
 
 def set_active_page(page: str) -> None:
     st.session_state[_ACTIVE_PAGE] = page
